@@ -28,7 +28,7 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const ASSISTANT_NAME = "Agnivesh AI";
 const WELCOME_MESSAGE =
-  "Namaste! Main Agnivesh AI hoon. Main Hindi, Hinglish, aur English mein naturally baat kar sakti hoon. Aaj kya kaam karna hai?";
+  "Namaste! Main hoon Agnivesh AI - Your Prsnl Intelligence.";
 
 export default function HomePage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,9 +36,11 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("Ready");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastTranscriptRef = useRef("");
   const listRef = useRef<HTMLDivElement | null>(null);
+  const activeRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setMessages([{ role: "assistant", content: WELCOME_MESSAGE }]);
@@ -60,12 +62,15 @@ export default function HomePage() {
     setMessages(nextMessages);
     setIsLoading(true);
     setStatus("Streaming response...");
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
 
     try {
       const res = await fetch("/api/chat-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages })
+        body: JSON.stringify({ messages: nextMessages }),
+        signal: controller.signal
       });
 
       if (!res.ok) {
@@ -110,6 +115,10 @@ export default function HomePage() {
 
       setStatus("Ready");
     } catch (error) {
+      if ((error as Error).name === "AbortError") {
+        setStatus("Generation stopped");
+        return;
+      }
       console.error(error);
       setMessages((prev) => [
         ...prev,
@@ -120,6 +129,7 @@ export default function HomePage() {
       ]);
       setStatus("Error while handling request");
     } finally {
+      activeRequestRef.current = null;
       setIsLoading(false);
     }
   }
@@ -139,6 +149,10 @@ export default function HomePage() {
       void sendMessage(textInput.trim());
       setTextInput("");
     }
+  }
+
+  function stopGeneration() {
+    activeRequestRef.current?.abort();
   }
 
   async function startRecording() {
@@ -205,6 +219,16 @@ export default function HomePage() {
     <main className="appShell">
       <section className="chatPanel">
         <header className="chatHeader">
+          <button
+            type="button"
+            className="menuBtn"
+            aria-label="Open menu"
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
           <div>
             <h1>{ASSISTANT_NAME}</h1>
             <p className="small">Built by Agnivesh Maurya | Personal assistant mode</p>
@@ -222,16 +246,40 @@ export default function HomePage() {
             >
               + New Chat
             </button>
+            {isLoading ? (
+              <button type="button" className="secondaryBtn" onClick={stopGeneration}>
+                Stop
+              </button>
+            ) : null}
           </div>
         </header>
 
-        <div className="messages" ref={listRef}>
-        {messages.map((m, idx) => (
-          <div key={`${m.role}-${idx}`} className={`msgRow ${m.role}`}>
-            <div className="msgMeta">{m.role === "user" ? "You" : ASSISTANT_NAME}</div>
-            <div className={`msg ${m.role}`}>{m.content || (m.role === "assistant" ? "..." : "")}</div>
+        {isMenuOpen ? (
+          <div className="menuSheet">
+            <button
+              type="button"
+              className="secondaryBtn"
+              onClick={() => {
+                setMessages([{ role: "assistant", content: WELCOME_MESSAGE }]);
+                setStatus("Started a new chat");
+                setIsMenuOpen(false);
+              }}
+              disabled={isLoading}
+            >
+              + New Chat
+            </button>
+            <p className="small">Privacy mode: chat history is not saved in browser.</p>
+            <p className="small">Voice input: hold and release to send.</p>
           </div>
-        ))}
+        ) : null}
+
+        <div className="messages" ref={listRef}>
+          {messages.map((m, idx) => (
+            <div key={`${m.role}-${idx}`} className={`msgRow ${m.role}`}>
+              <div className="msgMeta">{m.role === "user" ? "You" : ASSISTANT_NAME}</div>
+              <div className={`msg ${m.role}`}>{m.content || (m.role === "assistant" ? "..." : "")}</div>
+            </div>
+          ))}
           {isLoading ? (
             <div className="small" style={{ padding: "0 4px 8px" }}>
               {ASSISTANT_NAME} is thinking...
@@ -240,6 +288,26 @@ export default function HomePage() {
         </div>
 
         <form onSubmit={handleTextSubmit} className="composerWrap">
+          <div className="quickPrompts">
+            {[
+              "Mere liye aaj ka plan banao",
+              "Ek professional email draft karo",
+              "Coding me help chahiye",
+              "Hindi me explain karo"
+            ].map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                className="chipBtn"
+                disabled={isLoading}
+                onClick={() => {
+                  setTextInput(prompt);
+                }}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
           <textarea
             rows={3}
             placeholder={`Message ${ASSISTANT_NAME}...`}
