@@ -203,27 +203,26 @@ export default function HomePage() {
 
   return (
     <main className="appShell">
-      <aside className="sidebar">
-        <div className="brand">Agnivesh AI</div>
-        <button
-          type="button"
-          className="secondaryBtn"
-          onClick={() => {
-            setMessages([{ role: "assistant", content: WELCOME_MESSAGE }]);
-            setStatus("Started a new chat");
-          }}
-          disabled={isLoading}
-        >
-          + New Chat
-        </button>
-        <p className="small">Voice: Hindi/Hinglish support enabled with Indian accent preference.</p>
-        <p className="small">Privacy mode: chat history is not saved in browser.</p>
-      </aside>
-
       <section className="chatPanel">
         <header className="chatHeader">
-          <h1>{ASSISTANT_NAME}</h1>
-          <span className="small">{status}</span>
+          <div>
+            <h1>{ASSISTANT_NAME}</h1>
+            <p className="small">Built by Agnivesh Maurya | Personal assistant mode</p>
+          </div>
+          <div className="headerActions">
+            <span className="small">{status}</span>
+            <button
+              type="button"
+              className="secondaryBtn"
+              onClick={() => {
+                setMessages([{ role: "assistant", content: WELCOME_MESSAGE }]);
+                setStatus("Started a new chat");
+              }}
+              disabled={isLoading}
+            >
+              + New Chat
+            </button>
+          </div>
         </header>
 
         <div className="messages" ref={listRef}>
