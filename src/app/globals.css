@@ -9,6 +9,12 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: radial-gradient(1000px 500px at 10% 0%, #1a2340 0%, #0b1020 60%, #070b16 100%);
@@ -65,8 +71,12 @@ body {
 
 .chatHeader h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: clamp(16px, 2.2vw, 20px);
   font-weight: 700;
+}
+
+.chatHeader > div:first-of-type {
+  min-width: 0;
 }
 
 .headerActions {
@@ -218,6 +228,9 @@ button:disabled {
   }
   .chatHeader {
     padding: 10px;
+  }
+  .chatHeader h1 {
+    font-size: 16px;
   }
   .headerActions {
     gap: 6px;
