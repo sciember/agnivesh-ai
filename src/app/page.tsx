@@ -50,6 +50,7 @@ export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("Ready");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarQuery, setSidebarQuery] = useState("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastTranscriptRef = useRef("");
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -136,6 +137,21 @@ export default function HomePage() {
     setTextInput("");
     setStatus("Started a new chat");
     setIsSidebarOpen(false);
+  }
+
+  function deleteChat(chatId: string) {
+    setChats((prev) => {
+      const next = prev.filter((chat) => chat.id !== chatId);
+      if (next.length === 0) {
+        const fallback = createDefaultSession();
+        setCurrentChatId(fallback.id);
+        return [fallback];
+      }
+      if (currentChatId === chatId) {
+        setCurrentChatId(next[0].id);
+      }
+      return next;
+    });
   }
 
   async function sendMessage(nextUserText: string) {
@@ -287,12 +303,15 @@ export default function HomePage() {
           chats={chats}
           activeChatId={currentChatId}
           isOpen={isSidebarOpen}
+          query={sidebarQuery}
+          onQueryChange={setSidebarQuery}
           onClose={() => setIsSidebarOpen(false)}
           onNewChat={startNewChat}
           onSelectChat={(id) => {
             setCurrentChatId(id);
             setIsSidebarOpen(false);
           }}
+          onDeleteChat={deleteChat}
         />
         <div className="flex h-full min-w-0 flex-1 flex-col">
           <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
