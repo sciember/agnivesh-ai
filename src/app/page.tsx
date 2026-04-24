@@ -74,7 +74,8 @@ export default function HomePage() {
       });
 
       if (!res.ok) {
-        throw new Error("Chat request failed");
+        const errText = await res.text();
+        throw new Error(errText || "Chat request failed");
       }
 
       const reader = res.body?.getReader();
@@ -124,10 +125,11 @@ export default function HomePage() {
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I hit an error. Please try again."
+          content:
+            "Sorry, request fail ho gaya. Network check karo aur 1 baar phir try karo. Agar issue rahe to thodi der baad retry karo."
         }
       ]);
-      setStatus("Error while handling request");
+      setStatus(`Error: ${(error as Error).message || "Request failed"}`);
     } finally {
       activeRequestRef.current = null;
       setIsLoading(false);
