@@ -5,10 +5,6 @@ type Message = {
   content: string;
 };
 
-const client = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: "https://api.groq.com/openai/v1"
-});
 const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 const systemInstruction = `
 You are Agnivesh AI.
@@ -46,6 +42,15 @@ function redactSensitive(text: string): string {
 
 export async function POST(req: Request) {
   try {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return new Response("Missing GROQ_API_KEY on server", { status: 500 });
+    }
+    const client = new OpenAI({
+      apiKey,
+      baseURL: "https://api.groq.com/openai/v1"
+    });
+
     const body = (await req.json()) as { messages: Message[] };
     const messages = body.messages || [];
     const safeMessages = messages.slice(-12).map((m) => ({
