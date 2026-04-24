@@ -8,6 +8,12 @@ type Message = {
   role: Role;
   content: string;
 };
+type ChatSession = {
+  id: string;
+  title: string;
+  messages: Message[];
+  updatedAt: number;
+};
 
 type SpeechRecognitionEventLike = Event & {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -29,9 +35,26 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 const ASSISTANT_NAME = "Agnivesh AI";
 const WELCOME_MESSAGE =
   "Namaste! Main hoon Agnivesh AI - Your Prsnl Intelligence.";
+const CHAT_STORAGE_KEY = "agnivesh_ai_chat_history_v2";
+
+function createDefaultSession(): ChatSession {
+  return {
+    id: crypto.randomUUID(),
+    title: "New chat",
+    updatedAt: Date.now(),
+    messages: [{ role: "assistant", content: WELCOME_MESSAGE }]
+  };
+}
+
+function buildTitleFromMessages(messages: Message[]): string {
+  const firstUser = messages.find((m) => m.role === "user")?.content.trim();
+  if (!firstUser) return "New chat";
+  return firstUser.length > 38 ? `${firstUser.slice(0, 38)}...` : firstUser;
+}
 
 export default function HomePage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [chats, setChats] = useState<ChatSession[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string>("");
   const [textInput, setTextInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -43,10 +66,41 @@ export default function HomePage() {
   const activeRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    setMessages([{ role: "assistant", content: WELCOME_MESSAGE }]);
-    // Privacy-first mode: do not persist chat history locally.
-    localStorage.removeItem("agnivesh_voice_bot_messages_v1");
+    try {
+      const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (!raw) {
+        const initial = createDefaultSession();
+        setChats([initial]);
+        setCurrentChatId(initial.id);
+        return;
+      }
+      const parsed = JSON.parse(raw) as ChatSession[];
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        const initial = createDefaultSession();
+        setChats([initial]);
+        setCurrentChatId(initial.id);
+        return;
+      }
+      const sanitized = parsed.map((chat) => ({
+        ...chat,
+        messages: chat.messages?.length ? chat.messages : [{ role: "assistant", content: WELCOME_MESSAGE }]
+      }));
+      setChats(sanitized.sort((a, b) => b.updatedAt - a.updatedAt));
+      setCurrentChatId(sanitized[0].id);
+    } catch {
+      const initial = createDefaultSession();
+      setChats([initial]);
+      setCurrentChatId(initial.id);
+    }
   }, []);
+
+  useEffect(() => {
+    if (chats.length === 0) return;
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chats));
+  }, [chats]);
+
+  const currentChat = chats.find((chat) => chat.id === currentChatId) ?? chats[0];
+  const messages = currentChat?.messages ?? [];
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -57,9 +111,36 @@ export default function HomePage() {
     [isLoading, textInput]
   );
 
+  function updateCurrentChatMessages(nextMessages: Message[]) {
+    setChats((prev) =>
+      prev
+        .map((chat) =>
+          chat.id === currentChatId
+            ? {
+                ...chat,
+                messages: nextMessages,
+                title: buildTitleFromMessages(nextMessages),
+                updatedAt: Date.now()
+              }
+            : chat
+        )
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+    );
+  }
+
+  function startNewChat() {
+    const next = createDefaultSession();
+    setChats((prev) => [next, ...prev]);
+    setCurrentChatId(next.id);
+    setTextInput("");
+    setStatus("Started a new chat");
+    setIsMenuOpen(false);
+  }
+
   async function sendMessage(nextUserText: string) {
+    if (!currentChatId) return;
     const nextMessages = [...messages, { role: "user" as const, content: nextUserText }];
-    setMessages(nextMessages);
+    updateCurrentChatMessages(nextMessages);
     setIsLoading(true);
     setStatus("Streaming response...");
     const controller = new AbortController();
@@ -85,34 +166,19 @@ export default function HomePage() {
       const decoder = new TextDecoder();
       let assistantText = "";
 
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      const withPlaceholder = [...nextMessages, { role: "assistant" as const, content: "" }];
+      updateCurrentChatMessages(withPlaceholder);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         assistantText += decoder.decode(value, { stream: true });
-        setMessages((prev) => {
-          const cloned = [...prev];
-          const lastIdx = cloned.length - 1;
-          if (lastIdx >= 0 && cloned[lastIdx].role === "assistant") {
-            cloned[lastIdx] = {
-              ...cloned[lastIdx],
-              content: assistantText
-            };
-          }
-          return cloned;
-        });
+        const partial = [...nextMessages, { role: "assistant" as const, content: assistantText }];
+        updateCurrentChatMessages(partial);
       }
 
       const finalized = assistantText.trim() || "I could not generate a response.";
-      setMessages((prev) => {
-        const cloned = [...prev];
-        const lastIdx = cloned.length - 1;
-        if (lastIdx >= 0 && cloned[lastIdx].role === "assistant") {
-          cloned[lastIdx] = { role: "assistant", content: finalized };
-        }
-        return cloned;
-      });
+      updateCurrentChatMessages([...nextMessages, { role: "assistant", content: finalized }]);
 
       setStatus("Ready");
     } catch (error) {
@@ -121,8 +187,8 @@ export default function HomePage() {
         return;
       }
       console.error(error);
-      setMessages((prev) => [
-        ...prev,
+      updateCurrentChatMessages([
+        ...nextMessages,
         {
           role: "assistant",
           content:
@@ -240,10 +306,7 @@ export default function HomePage() {
             <button
               type="button"
               className="secondaryBtn"
-              onClick={() => {
-                setMessages([{ role: "assistant", content: WELCOME_MESSAGE }]);
-                setStatus("Started a new chat");
-              }}
+              onClick={startNewChat}
               disabled={isLoading}
             >
               + New Chat
@@ -258,20 +321,24 @@ export default function HomePage() {
 
         {isMenuOpen ? (
           <div className="menuSheet">
-            <button
-              type="button"
-              className="secondaryBtn"
-              onClick={() => {
-                setMessages([{ role: "assistant", content: WELCOME_MESSAGE }]);
-                setStatus("Started a new chat");
-                setIsMenuOpen(false);
-              }}
-              disabled={isLoading}
-            >
+            <button type="button" className="secondaryBtn" onClick={startNewChat} disabled={isLoading}>
               + New Chat
             </button>
-            <p className="small">Privacy mode: chat history is not saved in browser.</p>
-            <p className="small">Voice input: hold and release to send.</p>
+            <div className="historyList">
+              {chats.map((chat) => (
+                <button
+                  key={chat.id}
+                  type="button"
+                  className={`historyItem ${chat.id === currentChatId ? "active" : ""}`}
+                  onClick={() => {
+                    setCurrentChatId(chat.id);
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <span>{chat.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -290,26 +357,28 @@ export default function HomePage() {
         </div>
 
         <form onSubmit={handleTextSubmit} className="composerWrap">
-          <div className="quickPrompts">
-            {[
-              "Mere liye aaj ka plan banao",
-              "Ek professional email draft karo",
-              "Coding me help chahiye",
-              "Hindi me explain karo"
-            ].map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                className="chipBtn"
-                disabled={isLoading}
-                onClick={() => {
-                  setTextInput(prompt);
-                }}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+          {textInput.trim().length === 0 ? (
+            <div className="quickPrompts">
+              {[
+                "Mere liye aaj ka plan banao",
+                "Ek professional email draft karo",
+                "Coding me help chahiye",
+                "Hindi me explain karo"
+              ].map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="chipBtn"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setTextInput(prompt);
+                  }}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <textarea
             rows={3}
             placeholder={`Message ${ASSISTANT_NAME}...`}
@@ -319,8 +388,8 @@ export default function HomePage() {
             disabled={isLoading}
           />
           <div className="controls">
-            <button type="submit" disabled={!canSend}>
-              Send
+            <button type="submit" disabled={!canSend} aria-label="Send message" title="Send">
+              <span className="iconOnly">➤</span>
             </button>
             {!isRecording ? (
               <button
@@ -333,8 +402,9 @@ export default function HomePage() {
                 disabled={isLoading}
                 className="secondaryBtn"
                 title="Hold to talk"
+                aria-label="Hold to talk"
               >
-                Hold To Talk
+                <span className="iconOnly">🎤</span>
               </button>
             ) : (
               <button type="button" onClick={stopRecording} className="secondaryBtn">

@@ -102,6 +102,34 @@ body {
   padding: 10px;
   display: grid;
   gap: 8px;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.historyList {
+  display: grid;
+  gap: 6px;
+}
+
+.historyItem {
+  text-align: left;
+  background: #0e1830;
+  border: 1px solid #284472;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.historyItem span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historyItem.active {
+  background: #18305f;
+  border-color: #3a67b0;
 }
 
 .messages {
@@ -200,6 +228,12 @@ textarea:focus {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.iconOnly {
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
 }
 
 button {
