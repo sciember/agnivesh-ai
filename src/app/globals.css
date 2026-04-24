@@ -79,6 +79,13 @@ body {
   min-width: 0;
 }
 
+.chatHeader > div:first-of-type .small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 .headerActions {
   display: flex;
   align-items: center;
@@ -228,13 +235,21 @@ button:disabled {
   }
   .chatHeader {
     padding: 10px;
+    gap: 8px;
+    align-items: flex-start;
   }
   .chatHeader h1 {
     font-size: 16px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chatHeader > div:first-of-type .small {
+    max-width: calc(100vw - 90px);
   }
   .headerActions {
-    gap: 6px;
-    align-items: center;
+    display: none;
   }
   .messages {
     padding: 12px 8px;
@@ -245,12 +260,9 @@ button:disabled {
   .headerActions .small {
     display: none;
   }
-  .headerActions .secondaryBtn {
-    font-size: 12px;
-    padding: 7px 9px;
-  }
   .menuBtn {
     width: 34px;
     height: 34px;
+    flex-shrink: 0;
   }
 }
