@@ -1,19 +1,10 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-
-type Role = "user" | "assistant";
-
-type Message = {
-  role: Role;
-  content: string;
-};
-type ChatSession = {
-  id: string;
-  title: string;
-  messages: Message[];
-  updatedAt: number;
-};
+import { ChatArea } from "@/components/chat/ChatArea";
+import { Header } from "@/components/chat/Header";
+import { Sidebar } from "@/components/chat/Sidebar";
+import { ChatSession, Message } from "@/components/chat/types";
 
 type SpeechRecognitionEventLike = Event & {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -32,7 +23,6 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
-const ASSISTANT_NAME = "Agnivesh AI";
 const WELCOME_MESSAGE =
   "Namaste! Main hoon Agnivesh AI - Your Prsnl Intelligence.";
 const CHAT_STORAGE_KEY = "agnivesh_ai_chat_history_v2";
@@ -59,7 +49,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("Ready");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastTranscriptRef = useRef("");
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -119,6 +109,8 @@ export default function HomePage() {
     () => !isLoading && textInput.trim().length > 0,
     [isLoading, textInput]
   );
+  const showPrompts =
+    textInput.trim().length === 0 && messages.filter((m) => m.role === "user").length === 0;
 
   function updateCurrentChatMessages(nextMessages: Message[]) {
     setChats((prev) =>
@@ -143,7 +135,7 @@ export default function HomePage() {
     setCurrentChatId(next.id);
     setTextInput("");
     setStatus("Started a new chat");
-    setIsMenuOpen(false);
+    setIsSidebarOpen(false);
   }
 
   async function sendMessage(nextUserText: string) {
@@ -228,10 +220,6 @@ export default function HomePage() {
     }
   }
 
-  function stopGeneration() {
-    activeRequestRef.current?.abort();
-  }
-
   async function startRecording() {
     const speechCtor = (
       window as Window & {
@@ -293,136 +281,39 @@ export default function HomePage() {
   }
 
   return (
-    <main className="appShell">
-      <section className="chatPanel">
-        <header className="chatHeader">
-          <button
-            type="button"
-            className="menuBtn"
-            aria-label="Open menu"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-          <div>
-            <h1>{ASSISTANT_NAME}</h1>
-            <p className="small">Built by Agnivesh Maurya | Personal assistant mode</p>
-          </div>
-          <div className="headerActions">
-            <span className="small">{status}</span>
-            <button
-              type="button"
-              className="secondaryBtn"
-              onClick={startNewChat}
-              disabled={isLoading}
-            >
-              + New Chat
-            </button>
-            {isLoading ? (
-              <button type="button" className="secondaryBtn" onClick={stopGeneration}>
-                Stop
-              </button>
-            ) : null}
-          </div>
-        </header>
-
-        {isMenuOpen ? (
-          <div className="menuSheet">
-            <button type="button" className="secondaryBtn" onClick={startNewChat} disabled={isLoading}>
-              + New Chat
-            </button>
-            <div className="historyList">
-              {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  type="button"
-                  className={`historyItem ${chat.id === currentChatId ? "active" : ""}`}
-                  onClick={() => {
-                    setCurrentChatId(chat.id);
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <span>{chat.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        <div className="messages" ref={listRef}>
-          {messages.map((m, idx) => (
-            <div key={`${m.role}-${idx}`} className={`msgRow ${m.role}`}>
-              <div className="msgMeta">{m.role === "user" ? "You" : ASSISTANT_NAME}</div>
-              <div className={`msg ${m.role}`}>{m.content || (m.role === "assistant" ? "..." : "")}</div>
-            </div>
-          ))}
-          {isLoading ? (
-            <div className="small" style={{ padding: "0 4px 8px" }}>
-              {ASSISTANT_NAME} is thinking...
-            </div>
-          ) : null}
-        </div>
-
-        <form onSubmit={handleTextSubmit} className="composerWrap">
-          {textInput.trim().length === 0 ? (
-            <div className="quickPrompts">
-              {[
-                "Mere liye aaj ka plan banao",
-                "Ek professional email draft karo",
-                "Coding me help chahiye",
-                "Hindi me explain karo"
-              ].map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="chipBtn"
-                  disabled={isLoading}
-                  onClick={() => {
-                    setTextInput(prompt);
-                  }}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <textarea
-            rows={3}
-            placeholder={`Message ${ASSISTANT_NAME}...`}
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
+    <main className="h-screen w-full bg-slate-950">
+      <div className="flex h-full">
+        <Sidebar
+          chats={chats}
+          activeChatId={currentChatId}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          onNewChat={startNewChat}
+          onSelectChat={(id) => {
+            setCurrentChatId(id);
+            setIsSidebarOpen(false);
+          }}
+        />
+        <div className="flex h-full min-w-0 flex-1 flex-col">
+          <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
+          <div className="px-0 md:px-4 pb-2 text-center text-xs text-slate-400">{status}</div>
+          <ChatArea
+            messages={messages}
+            isLoading={isLoading}
+            isRecording={isRecording}
+            textInput={textInput}
+            canSend={canSend}
+            showPrompts={showPrompts}
+            listRef={listRef}
+            onChangeText={setTextInput}
+            onSubmit={handleTextSubmit}
             onKeyDown={handleComposerKeyDown}
-            disabled={isLoading}
+            onPromptClick={setTextInput}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
           />
-          <div className="controls">
-            <button type="submit" disabled={!canSend} aria-label="Send message" title="Send">
-              <span className="iconOnly">➤</span>
-            </button>
-            {!isRecording ? (
-              <button
-                type="button"
-                onPointerDown={startRecording}
-                onPointerUp={stopRecording}
-                onPointerLeave={stopRecording}
-                onTouchEnd={stopRecording}
-                onMouseUp={stopRecording}
-                disabled={isLoading}
-                className="secondaryBtn"
-                title="Hold to talk"
-                aria-label="Hold to talk"
-              >
-                <span className="iconOnly">🎤</span>
-              </button>
-            ) : (
-              <button type="button" onClick={stopRecording} className="secondaryBtn">
-                Listening... Release
-              </button>
-            )}
-          </div>
-        </form>
-      </section>
+        </div>
+      </div>
     </main>
   );
 }
