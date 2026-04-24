@@ -81,9 +81,18 @@ export default function HomePage() {
         setCurrentChatId(initial.id);
         return;
       }
-      const sanitized = parsed.map((chat) => ({
+      const sanitized: ChatSession[] = parsed.map((chat) => ({
         ...chat,
-        messages: chat.messages?.length ? chat.messages : [{ role: "assistant", content: WELCOME_MESSAGE }]
+        messages:
+          chat.messages?.length
+            ? chat.messages
+                .map((message) =>
+                  message.role === "assistant" || message.role === "user"
+                    ? ({ role: message.role, content: String(message.content ?? "") } as Message)
+                    : null
+                )
+                .filter((message): message is Message => Boolean(message))
+            : [{ role: "assistant", content: WELCOME_MESSAGE }]
       }));
       setChats(sanitized.sort((a, b) => b.updatedAt - a.updatedAt));
       setCurrentChatId(sanitized[0].id);
