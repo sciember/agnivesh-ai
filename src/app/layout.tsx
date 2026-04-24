@@ -3,7 +3,17 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Agnivesh AI",
-  description: "Web chatbot with voice input and output"
+  description: "Personal AI Assistant built by Agnivesh Maurya",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Agnivesh AI"
+  },
+  icons: [
+    { rel: "icon", url: "/favicon.ico" },
+    { rel: "apple-touch-icon", url: "/icon-192.png" }
+  ]
 };
 
 export const viewport: Viewport = {
