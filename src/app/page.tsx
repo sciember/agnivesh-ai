@@ -32,6 +32,7 @@ function createDefaultSession(): ChatSession {
     id: crypto.randomUUID(),
     title: "New chat",
     updatedAt: Date.now(),
+    lastMessage: undefined,
     messages: [{ role: "assistant", content: WELCOME_MESSAGE }]
   };
 }
@@ -114,6 +115,7 @@ export default function HomePage() {
     textInput.trim().length === 0 && messages.filter((m) => m.role === "user").length === 0;
 
   function updateCurrentChatMessages(nextMessages: Message[]) {
+    const lastUserMessage = nextMessages.filter((m) => m.role === "user").pop()?.content;
     setChats((prev) =>
       prev
         .map((chat) =>
@@ -122,6 +124,7 @@ export default function HomePage() {
                 ...chat,
                 messages: nextMessages,
                 title: buildTitleFromMessages(nextMessages),
+                lastMessage: lastUserMessage,
                 updatedAt: Date.now()
               }
             : chat

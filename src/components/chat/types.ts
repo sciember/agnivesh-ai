@@ -10,4 +10,5 @@ export type ChatSession = {
   title: string;
   messages: Message[];
   updatedAt: number;
+  lastMessage?: string;
 };
