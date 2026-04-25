@@ -214,7 +214,7 @@ export default function HomePage() {
           const data = await res.json();
           if (data.chat?._id) {
             chatId = data.chat._id;
-            setCurrentChatId(chatId);
+            setCurrentChatId(String(chatId));
           }
         }
       } catch (err) {
