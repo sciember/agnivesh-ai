@@ -4,7 +4,9 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import { ChatArea } from "@/components/chat/ChatArea";
 import { Header } from "@/components/chat/Header";
 import { Sidebar } from "@/components/chat/Sidebar";
+import { AuthModal } from "@/components/chat/AuthModal";
 import { ChatSession, Message } from "@/components/chat/types";
+import { useAuth } from "@/context/AuthContext";
 
 type SpeechRecognitionEventLike = Event & {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -44,6 +46,7 @@ function buildTitleFromMessages(messages: Message[]): string {
 }
 
 export default function HomePage() {
+  const { user, token } = useAuth();
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string>("");
   const [textInput, setTextInput] = useState("");
@@ -52,6 +55,7 @@ export default function HomePage() {
   const [status, setStatus] = useState("Ready");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarQuery, setSidebarQuery] = useState("");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastTranscriptRef = useRef("");
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -99,6 +103,30 @@ export default function HomePage() {
     if (chats.length === 0) return;
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chats));
   }, [chats]);
+
+  // Load chats from database when user logs in
+  useEffect(() => {
+    if (!token) return;
+    
+    async function loadUserChats() {
+      try {
+        const res = await fetch("/api/chats", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.chats && data.chats.length > 0) {
+            setChats(data.chats);
+            setCurrentChatId(data.chats[0]._id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load chats:", err);
+      }
+    }
+    
+    loadUserChats();
+  }, [token]);
 
   const currentChat = chats.find((chat) => chat.id === currentChatId) ?? chats[0];
   const messages = currentChat?.messages ?? [];
@@ -166,10 +194,49 @@ export default function HomePage() {
     const controller = new AbortController();
     activeRequestRef.current = controller;
 
+    // If user is logged in, create/save chat to database
+    let chatId = token ? currentChatId : undefined;
+    
+    if (token && !chatId) {
+      try {
+        const res = await fetch("/api/chats", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            message: nextUserText,
+            title: buildTitleFromMessages(nextMessages)
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.chat?._id) {
+            chatId = data.chat._id;
+            setCurrentChatId(chatId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to create chat:", err);
+      }
+    }
+
     try {
-      const res = await fetch("/api/chat-stream", {
+      // Pass token to API if logged in
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      // Add chatId to URL for database saving
+      const chatStreamUrl = chatId 
+        ? `/api/chat-stream?chatId=${chatId}` 
+        : "/api/chat-stream";
+      
+      const res = await fetch(chatStreamUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ messages: nextMessages }),
         signal: controller.signal
       });
@@ -317,7 +384,11 @@ export default function HomePage() {
           onDeleteChat={deleteChat}
         />
         <div className="flex h-full min-w-0 flex-1 flex-col">
-          <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
+          <Header 
+            isSidebarOpen={isSidebarOpen} 
+            onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+          />
           <div className="px-0 md:px-4 pb-2 text-center text-xs text-slate-400">{status}</div>
           <ChatArea
             messages={messages}
@@ -336,6 +407,7 @@ export default function HomePage() {
           />
         </div>
       </div>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </main>
   );
 }
