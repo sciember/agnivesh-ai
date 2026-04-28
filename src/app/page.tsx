@@ -26,7 +26,7 @@ type SpeechRecognitionLike = {
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const WELCOME_MESSAGE =
-  "Namaste! Main hoon Agnivesh AI - Your Prsnl Intelligence.";
+  "Namaste! Main hoon Stezix AI - Your Prsnl Intelligence.";
 const CHAT_STORAGE_KEY = "agnivesh_ai_chat_history_v2";
 
 function createDefaultSession(): ChatSession {

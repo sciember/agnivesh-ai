@@ -56,7 +56,7 @@ export function InputBar({
             onChange={(e) => onChangeText(e.target.value)}
             onKeyDown={onKeyDown}
             disabled={isLoading}
-            placeholder="Message Agnivesh AI..."
+            placeholder="Message Stezix AI..."
             className="w-full resize-y rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 outline-none transition-all placeholder:text-slate-500 focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/20"
           />
           <div className="absolute bottom-3 right-3 pointer-events-none">

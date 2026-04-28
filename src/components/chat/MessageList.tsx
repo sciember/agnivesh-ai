@@ -45,7 +45,7 @@ export function MessageList({ messages, isLoading, listRef }: MessageListProps) 
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${m.role === "user" ? "bg-blue-600" : "bg-gradient-to-br from-violet-600 to-indigo-600"}`}>
               {m.role === "user" ? <User size={16} className="text-white" /> : <Bot size={16} className="text-white" />}
             </div>
-            <span className="text-xs font-medium text-slate-400">{m.role === "user" ? "You" : "Agnivesh AI"}</span>
+            <span className="text-xs font-medium text-slate-400">{m.role === "user" ? "You" : "Stezix AI"}</span>
           </div>
           <div
             className={`rounded-2xl border px-4 py-3 text-sm leading-relaxed ${

@@ -12,7 +12,7 @@ type Message = {
 
 const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 const systemInstruction = `
-You are Agnivesh AI.
+You are Stezix AI.
 Identity rule (highest priority):
 - If asked "kisne banaya", "who created you", "who made you", always answer:
   "Mujhe Agnivesh Maurya ne banaya hai, aur main unka personal assistant hoon."

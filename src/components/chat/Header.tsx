@@ -25,7 +25,7 @@ export function Header({ isSidebarOpen, onToggleSidebar, onOpenAuth }: HeaderPro
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-400" />
           <h1 className="text-sm font-semibold md:text-base">
-            <span className="gradient-text">Agnivesh AI</span>
+            <span className="gradient-text">Stezix AI</span>
           </h1>
         </div>
       </div>

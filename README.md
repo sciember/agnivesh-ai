@@ -1,4 +1,4 @@
-# Agnivesh Voice Bot (Web MVP)
+# Stezix AI (Web MVP)
 
 A web-first chatbot with:
 - text chat

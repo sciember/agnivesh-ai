@@ -3,13 +3,13 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Agnivesh AI",
+  title: "Stezix AI",
   description: "Personal AI Assistant built by Agnivesh Maurya",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Agnivesh AI"
+    title: "Stezix AI"
   },
   icons: [
     { rel: "icon", url: "/favicon.ico" },
