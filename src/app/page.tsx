@@ -56,10 +56,12 @@ export default function HomePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarQuery, setSidebarQuery] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false); // Voice mode toggle
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastTranscriptRef = useRef("");
   const listRef = useRef<HTMLDivElement | null>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     try {
@@ -267,6 +269,11 @@ export default function HomePage() {
       const finalized = assistantText.trim() || "I could not generate a response.";
       updateCurrentChatMessages([...nextMessages, { role: "assistant", content: finalized }]);
 
+      // Auto-speak if voice mode is enabled
+      if (isVoiceMode && finalized) {
+        speakText(finalized);
+      }
+
       setStatus("Ready");
     } catch (error) {
       if ((error as Error).name === "AbortError") {
@@ -366,6 +373,53 @@ export default function HomePage() {
     }
   }
 
+  // Text-to-Speech function using Browser SpeechSynthesis API
+  function speakText(text: string) {
+    if (!text) return;
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Try to find a good Hindi/English voice
+    const voices = window.speechSynthesis.getVoices();
+    const hindiVoice = voices.find(v => 
+      v.lang.includes('hi') || v.name.includes('Hindi')
+    );
+    const englishVoice = voices.find(v => 
+      v.lang.includes('en') && v.name.includes('Google')
+    );
+    
+    // Prefer Hindi voice, fallback to English
+    utterance.voice = hindiVoice || englishVoice || null;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    utterance.onstart = () => {
+      setStatus("Speaking...");
+    };
+    
+    utterance.onend = () => {
+      setStatus("Ready");
+    };
+    
+    utterance.onerror = (event) => {
+      console.error("TTS Error:", event.error);
+      setStatus("Speech error: " + event.error);
+    };
+    
+    speechSynthRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Stop speaking
+  function stopSpeaking() {
+    window.speechSynthesis.cancel();
+    setStatus("Ready");
+  }
+
   return (
     <main className="h-screen w-full bg-slate-950">
       <div className="flex h-full">
@@ -388,6 +442,8 @@ export default function HomePage() {
             isSidebarOpen={isSidebarOpen} 
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             onOpenAuth={() => setIsAuthModalOpen(true)}
+            isVoiceMode={isVoiceMode}
+            onToggleVoiceMode={() => setIsVoiceMode((prev) => !prev)}
           />
           <div className="px-0 md:px-4 pb-2 text-center text-xs text-slate-400">{status}</div>
           <ChatArea

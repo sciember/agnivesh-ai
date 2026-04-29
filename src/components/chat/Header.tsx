@@ -1,13 +1,15 @@
-import { Menu, Sparkles, LogIn, LogOut, User as UserIcon } from "lucide-react";
+import { Menu, Sparkles, LogIn, LogOut, User as UserIcon, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 type HeaderProps = {
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
   onOpenAuth: () => void;
+  isVoiceMode?: boolean;
+  onToggleVoiceMode?: () => void;
 };
 
-export function Header({ isSidebarOpen, onToggleSidebar, onOpenAuth }: HeaderProps) {
+export function Header({ isSidebarOpen, onToggleSidebar, onOpenAuth, isVoiceMode = false, onToggleVoiceMode }: HeaderProps) {
   const { user, logout } = useAuth();
 
   return (
@@ -31,6 +33,21 @@ export function Header({ isSidebarOpen, onToggleSidebar, onOpenAuth }: HeaderPro
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Voice Mode Toggle */}
+        {onToggleVoiceMode && (
+          <button
+            onClick={onToggleVoiceMode}
+            aria-label={isVoiceMode ? "Disable voice mode" : "Enable voice mode"}
+            className={`rounded-lg border p-2 transition-all ${
+              isVoiceMode 
+                ? "border-green-500/50 bg-green-500/20 text-green-400" 
+                : "border-white/10 text-slate-400 hover:bg-white/10 hover:text-white"
+            }`}
+            title={isVoiceMode ? "Voice mode ON - Click to disable" : "Voice mode OFF - Click to enable"}
+          >
+            {isVoiceMode ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+        )}
         {user ? (
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 md:flex">
